@@ -1,0 +1,230 @@
+openapi: 3.0.0
+info:
+  title: Secret Message Exchange Service
+  version: 1.0.0
+servers:
+- url: /
+paths:
+  /register:
+    post:
+      tags:
+      - auth
+      summary: Register a new user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/register_body'
+            examples:
+              user-data:
+                value:
+                  username: newuser
+                  password: securepassword123
+        required: true
+      responses:
+        "200":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+        "500":
+          description: User register failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_500'
+  /login:
+    post:
+      tags:
+      - auth
+      summary: User Login
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/login_body'
+            examples:
+              user-data:
+                value:
+                  username: newuser
+                  password: securepassword123
+        required: true
+      responses:
+        "200":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+              examples:
+                user-token:
+                  value:
+                    user_id: "1"
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiSm9obiBEb2UiLCJyb2xlIjoic2VjdXJlIn0.uFuvGpWps71F7EKhG0A47D6DkSdl9tMZCD5m_7v0qdE-
+        "401":
+          description: Invalid username or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+  /message:
+    post:
+      tags:
+      - message
+      summary: Creates a new secret message
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+            examples:
+              example1:
+                $ref: '#/components/examples/Message'
+        required: true
+      responses:
+        "200":
+          description: Successfully created message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_1'
+        "401":
+          description: User must be auth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401_1'
+      security:
+      - BearerAuth: []
+  /message/{id}:
+    get:
+      tags:
+      - message
+      summary: Retrieves a secret message by ID
+      parameters:
+      - name: id
+        in: path
+        description: Message ID
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        examples:
+          example1:
+            value: "1"
+      responses:
+        "200":
+          description: Successfully retrieved message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        "401":
+          description: User must be auth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401_1'
+        "410":
+          description: Message expired or read limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_410'
+      security:
+      - BearerAuth: []
+components:
+  schemas:
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+        ttl:
+          type: integer
+          description: Time to live in seconds
+        max_reads:
+          type: integer
+          description: Maximum number of reads allowed
+      example:
+        max_reads: 6
+        message: message
+        ttl: 0
+    register_body:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    inline_response_200:
+      type: object
+      properties:
+        user_id:
+          type: string
+        token:
+          type: string
+      example:
+        user_id: user_id
+        token: token
+    inline_response_500:
+      type: object
+      properties:
+        type:
+          type: string
+        Message:
+          type: string
+    login_body:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    inline_response_401:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Invalid username or password
+    inline_response_200_1:
+      type: object
+      properties:
+        id:
+          type: string
+        link:
+          type: string
+      example:
+        link: link
+        id: id
+    inline_response_401_1:
+      type: object
+      properties:
+        error:
+          type: string
+          example: User must be auth
+    inline_response_410:
+      type: object
+      properties:
+        message:
+          type: string
+  responses:
+    NeedAuth:
+      description: User must be auth
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_response_401_1'
+  examples:
+    Message:
+      value:
+        message: This is new message
+        ttl: 360
+        max_reads: 4
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
